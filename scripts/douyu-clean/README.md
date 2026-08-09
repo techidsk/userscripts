@@ -37,3 +37,5 @@
 主要面向桌面版 Chromium 浏览器和 Tampermonkey。斗鱼更新页面结构后，个别选择器或画质逻辑可能需要同步调整。
 
 遇到播放、画质或布局问题时，请提交 [Issue](https://github.com/techidsk/userscripts/issues)，并附上直播间地址、浏览器版本和问题截图。
+
+版本变化见 [CHANGELOG.md](CHANGELOG.md)。

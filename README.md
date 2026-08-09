@@ -20,14 +20,20 @@
 
 ## 目录约定
 
-每个脚本放在 `scripts/<script-name>/` 下，并至少包含：
+每个正式脚本放在 `scripts/<script-slug>/` 下：
 
-- `<script-name>.user.js`：可直接安装的用户脚本。
-- `README.md`：功能、安装方式和使用说明。
+```text
+scripts/<script-slug>/
+├─ <script-slug>.user.js
+├─ README.md
+└─ CHANGELOG.md
+```
+
+可按需增加 `src/`、`tests/` 和 `assets/`。完整的命名、元数据、版本、隐私和验证要求见[用户脚本目录与发布规范](docs/script-conventions.md)。
 
 ## 隐私与安全
 
-- 仓库中的脚本均可直接审阅，不上传本仓库自行收集的用户数据。
+- 仓库中的脚本均可直接审阅，不收集或上传用户数据。
 - 每个脚本应将 `@match` 限制在实际需要的网站范围内。
 - 用户脚本可能会随目标网站改版而失效；发现问题请提交 [Issue](https://github.com/techidsk/userscripts/issues)。
 
