@@ -13,6 +13,7 @@
 | 脚本 | 功能 | 安装 |
 | --- | --- | --- |
 | [斗鱼极简直播间](scripts/douyu-clean/) | 清理活动、贵族/VIP、超级弹幕和特效；默认网页全屏；自动选择最高可用画质；拦截常见统计追踪 | [安装脚本](https://raw.githubusercontent.com/techidsk/userscripts/main/scripts/douyu-clean/douyu-clean.user.js) |
+| [小红书：屏蔽点点 AI](scripts/xiaohongshu-no-diandian-ai/) | 隐藏点点 AI 入口和占位；阻止 AI 对话与搜索增强请求；保留普通笔记搜索 | [安装脚本](https://raw.githubusercontent.com/techidsk/userscripts/main/scripts/xiaohongshu-no-diandian-ai/xiaohongshu-no-diandian-ai.user.js) |
 
 ## 自动更新
 
