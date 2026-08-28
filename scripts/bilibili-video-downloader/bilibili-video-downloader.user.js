@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bilibili 视频下载助手
 // @namespace    https://github.com/techidsk/userscripts
-// @version      1.0.1
+// @version      1.0.2
 // @description  在 Bilibili 普通视频页下载当前分 P 的兼容版，或分别下载高清 DASH 视频与音频轨道。
 // @author       techidsk
 // @license      MIT
@@ -50,6 +50,7 @@
     progressiveData: null,
     videoTracks: [],
     audioTracks: [],
+    downloadTasks: [],
     loadToken: 0,
     actionBusy: false,
   };
@@ -263,6 +264,108 @@
         background: #fff;
       }
 
+      .download-tasks {
+        scroll-margin: 12px;
+        border-color: #b8e7f8;
+        background: #f8fdff;
+      }
+
+      .download-summary {
+        flex: 0 0 auto;
+        color: #00a1d6;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .download-task-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .download-task {
+        padding: 11px 12px;
+        border: 1px solid #e3e5e7;
+        border-radius: 10px;
+        background: #fff;
+      }
+
+      .download-task-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .download-task-label {
+        min-width: 0;
+        color: #18191c;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .download-task-state {
+        flex: 0 0 auto;
+        color: #00a1d6;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .download-task-name {
+        margin-top: 4px;
+        overflow: hidden;
+        color: #9499a0;
+        font-size: 11px;
+        line-height: 1.4;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .download-task-progress {
+        height: 6px;
+        margin-top: 9px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #e8f3f8;
+      }
+
+      .download-task-progress-bar {
+        width: 0;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #00aeec, #48c8f3);
+        transition: width 180ms ease;
+      }
+
+      .download-task-progress-bar[data-indeterminate="true"] {
+        width: 38%;
+        animation: download-progress-indeterminate 1.1s ease-in-out infinite;
+      }
+
+      .download-task-detail {
+        margin-top: 6px;
+        color: #61666d;
+        font-size: 11px;
+        line-height: 1.4;
+      }
+
+      .download-task[data-state="complete"] .download-task-state { color: #2f8f4e; }
+      .download-task[data-state="complete"] .download-task-progress-bar { background: #4fbd75; }
+      .download-task[data-state="error"] .download-task-state { color: #d64252; }
+      .download-task[data-state="error"] .download-task-progress-bar { background: #f06a77; }
+      .download-task[data-state="retrying"] .download-task-state { color: #c97919; }
+
+      @keyframes download-progress-indeterminate {
+        from { transform: translateX(-115%); }
+        to { transform: translateX(305%); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .download-task-progress-bar[data-indeterminate="true"] {
+          animation: none;
+          transform: translateX(80%);
+        }
+      }
+
       .section-title-row {
         display: flex;
         align-items: flex-start;
@@ -408,6 +511,17 @@
 
           <div id="status" class="status" role="status" aria-live="polite">正在加载…</div>
 
+          <section id="download-tasks" class="section download-tasks" aria-labelledby="download-tasks-title" hidden>
+            <div class="section-title-row">
+              <div>
+                <h3 id="download-tasks-title">下载任务</h3>
+                <p class="hint">浏览器下载栏可能在 Tampermonkey 完成接收后才出现，请以这里的状态为准。</p>
+              </div>
+              <span id="download-summary" class="download-summary"></span>
+            </div>
+            <div id="download-task-list" class="download-task-list" role="status" aria-live="polite"></div>
+          </section>
+
           <section id="page-section" class="section" hidden>
             <div class="field">
               <label for="page-select">分 P</label>
@@ -482,6 +596,9 @@
       'video-title',
       'video-meta',
       'status',
+      'download-tasks',
+      'download-summary',
+      'download-task-list',
       'page-section',
       'page-select',
       'dash-section',
@@ -979,6 +1096,137 @@
     return `${code}${details}`;
   }
 
+  function waitForVisiblePaint() {
+    return new Promise((resolve) => {
+      const finishAfterPaint = () => setTimeout(resolve, 0);
+      if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(finishAfterPaint);
+      } else {
+        finishAfterPaint();
+      }
+    });
+  }
+
+  function updateDownloadSummary() {
+    const total = state.downloadTasks.length;
+    const completed = state.downloadTasks.filter((task) => task.status === 'complete').length;
+    const failed = state.downloadTasks.filter((task) => task.status === 'error').length;
+    const finished = completed + failed;
+
+    if (total === 0) {
+      ui['download-summary'].textContent = '';
+      return;
+    }
+
+    if (finished === total) {
+      ui['download-summary'].textContent =
+        failed > 0 ? `${completed} 成功 · ${failed} 失败` : '全部完成';
+      ui['download-tasks'].setAttribute('aria-busy', 'false');
+      return;
+    }
+
+    ui['download-summary'].textContent = `${finished}/${total} 已结束`;
+  }
+
+  function renderDownloadTasks(items) {
+    ui['download-task-list'].replaceChildren();
+    ui['download-tasks'].hidden = false;
+    ui['download-tasks'].setAttribute('aria-busy', 'true');
+
+    state.downloadTasks = items.map((item) => {
+      const row = document.createElement('div');
+      row.className = 'download-task';
+      row.dataset.state = 'queued';
+
+      const heading = document.createElement('div');
+      heading.className = 'download-task-heading';
+
+      const label = document.createElement('span');
+      label.className = 'download-task-label';
+      label.textContent = item.label;
+
+      const status = document.createElement('span');
+      status.className = 'download-task-state';
+      status.textContent = '准备中';
+      heading.append(label, status);
+
+      const filename = document.createElement('div');
+      filename.className = 'download-task-name';
+      filename.textContent = item.name;
+      filename.title = item.name;
+
+      const progress = document.createElement('div');
+      progress.className = 'download-task-progress';
+      const progressBar = document.createElement('div');
+      progressBar.className = 'download-task-progress-bar';
+      progressBar.dataset.indeterminate = 'true';
+      progress.appendChild(progressBar);
+
+      const detail = document.createElement('div');
+      detail.className = 'download-task-detail';
+      detail.textContent = '等待启动下载…';
+
+      row.append(heading, filename, progress, detail);
+      ui['download-task-list'].appendChild(row);
+
+      return {
+        row,
+        statusElement: status,
+        detailElement: detail,
+        progressBar,
+        status: 'queued',
+        loaded: 0,
+        total: 0,
+      };
+    });
+
+    updateDownloadSummary();
+    return state.downloadTasks;
+  }
+
+  function updateDownloadTask(task, update) {
+    Object.assign(task, update);
+    task.row.dataset.state = task.status;
+
+    const statusLabels = {
+      queued: '准备中',
+      downloading: '正在下载',
+      retrying: '切换线路',
+      complete: '已完成',
+      error: '失败',
+    };
+    task.statusElement.textContent = statusLabels[task.status] || task.status;
+
+    const loaded = Number(task.loaded || 0);
+    const total = Number(task.total || 0);
+    const hasKnownTotal = total > 0;
+    const percent = hasKnownTotal ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
+
+    if (task.status === 'complete') {
+      task.detailElement.textContent =
+        loaded > 0 ? `${formatBytes(loaded)} · 下载完成` : '下载完成';
+      task.progressBar.dataset.indeterminate = 'false';
+      task.progressBar.style.width = '100%';
+    } else if (task.status === 'error') {
+      task.detailElement.textContent = task.message || '下载失败';
+      task.progressBar.dataset.indeterminate = 'false';
+      task.progressBar.style.width = '100%';
+    } else if (hasKnownTotal) {
+      task.detailElement.textContent = `${formatBytes(loaded)} / ${formatBytes(total)} · ${percent}%`;
+      task.progressBar.dataset.indeterminate = 'false';
+      task.progressBar.style.width = `${percent}%`;
+    } else {
+      task.detailElement.textContent =
+        loaded > 0
+          ? `${formatBytes(loaded)} · 总大小未知`
+          : task.message || '已交给 Tampermonkey，等待下载进度…';
+      task.progressBar.dataset.indeterminate = 'true';
+      task.progressBar.style.width = '';
+    }
+
+    updateDownloadSummary();
+  }
+
   function downloadOnce(url, name, onProgress) {
     if (typeof GM_download !== 'function') {
       const anchor = document.createElement('a');
@@ -999,8 +1247,11 @@
           conflictAction: 'uniquify',
           headers: { Referer: location.href },
           onprogress(event) {
-            if (event.lengthComputable && event.total > 0 && typeof onProgress === 'function') {
-              onProgress(Math.round((event.loaded / event.total) * 100));
+            if (typeof onProgress === 'function') {
+              const loaded = Number(event.loaded || 0);
+              const total =
+                event.lengthComputable && Number(event.total) > 0 ? Number(event.total) : 0;
+              onProgress({ loaded, total });
             }
           },
           onload() {
@@ -1019,15 +1270,24 @@
     });
   }
 
-  async function downloadWithFallback(item, name, label) {
+  async function downloadWithFallback(item, name, label, task) {
     const urls = getCandidateUrls(item);
     if (urls.length === 0) throw new Error(`${label}没有可用下载地址`);
 
     let lastError = null;
     for (let index = 0; index < urls.length; index += 1) {
+      updateDownloadTask(task, {
+        status: index === 0 ? 'downloading' : 'retrying',
+        loaded: 0,
+        total: 0,
+        message:
+          index === 0
+            ? '已交给 Tampermonkey，等待下载进度…'
+            : `正在尝试备用线路 ${index + 1}/${urls.length}…`,
+      });
       try {
-        await downloadOnce(urls[index], name, (percent) => {
-          setStatus(`正在下载${label}：${percent}%`);
+        await downloadOnce(urls[index], name, ({ loaded, total }) => {
+          updateDownloadTask(task, { status: 'downloading', loaded, total, message: '' });
         });
         return;
       } catch (error) {
@@ -1040,12 +1300,29 @@
 
   async function runDownloads(items, successMessage) {
     if (state.actionBusy) return;
+    const tasks = renderDownloadTasks(items);
     setActionBusy(true);
-    setStatus(`正在启动 ${items.length} 个下载任务…`);
+    setStatus(`已创建 ${items.length} 个下载任务，正在交给 Tampermonkey…`);
+    if (typeof ui['download-tasks'].scrollIntoView === 'function') {
+      ui['download-tasks'].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    await waitForVisiblePaint();
 
     try {
       const results = await Promise.allSettled(
-        items.map((item) => downloadWithFallback(item.media, item.name, item.label)),
+        items.map(async (item, index) => {
+          try {
+            await downloadWithFallback(item.media, item.name, item.label, tasks[index]);
+            updateDownloadTask(tasks[index], {
+              status: 'complete',
+              loaded: tasks[index].total > 0 ? tasks[index].total : tasks[index].loaded,
+              message: '',
+            });
+          } catch (error) {
+            updateDownloadTask(tasks[index], { status: 'error', message: error.message });
+            throw error;
+          }
+        }),
       );
       const failures = results.filter((result) => result.status === 'rejected');
       if (failures.length > 0) {
