@@ -15,6 +15,7 @@
 | [Bilibili 视频下载助手](scripts/bilibili-video-downloader/) | 下载普通视频页的兼容版，或分别保存高清 DASH 视频与音频轨；支持分 P、FFmpeg 合并命令和备用 CDN | [安装脚本](https://raw.githubusercontent.com/techidsk/userscripts/main/scripts/bilibili-video-downloader/bilibili-video-downloader.user.js) |
 | [斗鱼极简直播间](scripts/douyu-clean/) | 清理活动、贵族/VIP、超级弹幕和特效；默认网页全屏；自动选择最高可用画质；拦截常见统计追踪 | [安装脚本](https://raw.githubusercontent.com/techidsk/userscripts/main/scripts/douyu-clean/douyu-clean.user.js) |
 | [小红书：屏蔽点点 AI](scripts/xiaohongshu-no-diandian-ai/) | 隐藏点点 AI 入口和占位；阻止 AI 对话与搜索增强请求；保留普通笔记搜索 | [安装脚本](https://raw.githubusercontent.com/techidsk/userscripts/main/scripts/xiaohongshu-no-diandian-ai/xiaohongshu-no-diandian-ai.user.js) |
+| [雪球公开页面净化](scripts/xueqiu-public-clean/) | 抑制公开页面自动登录弹窗；匿名打开帖子讨论；移除下载推广并减少非必要追踪 | [安装脚本](https://raw.githubusercontent.com/techidsk/userscripts/main/scripts/xueqiu-public-clean/xueqiu-public-clean.user.js) |
 
 ## 自动更新
 
