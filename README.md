@@ -12,6 +12,7 @@
 
 | 脚本 | 功能 | 安装 |
 | --- | --- | --- |
+| [煎蛋热榜优化](scripts/jandan-top-fix/) | 提前恢复暗色主题，通过 CSS 显示已加载但被隐藏的媒体 | [安装脚本](https://raw.githubusercontent.com/techidsk/userscripts/main/scripts/jandan-top-fix/jandan-top-fix.user.js) |
 | [Bilibili 视频下载助手](scripts/bilibili-video-downloader/) | 下载普通视频页的兼容版，或分别保存高清 DASH 视频与音频轨；支持分 P、FFmpeg 合并命令和备用 CDN | [安装脚本](https://raw.githubusercontent.com/techidsk/userscripts/main/scripts/bilibili-video-downloader/bilibili-video-downloader.user.js) |
 | [斗鱼极简直播间](scripts/douyu-clean/) | 清理活动、贵族/VIP、超级弹幕和特效；默认网页全屏；自动选择最高可用画质；拦截常见统计追踪 | [安装脚本](https://raw.githubusercontent.com/techidsk/userscripts/main/scripts/douyu-clean/douyu-clean.user.js) |
 | [IT之家移动端阅读增强](scripts/ithome-reader/) | 为移动端新闻流和热榜补充导语，提供左右卡片布局以及图片、紧凑和净化开关 | [安装脚本](https://raw.githubusercontent.com/techidsk/userscripts/main/scripts/ithome-reader/ithome-reader.user.js) |
